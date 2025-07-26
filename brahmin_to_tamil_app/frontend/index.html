@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Brahmin to Tamil Translator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 30px;
+    }
+    video, canvas, img {
+      margin-top: 15px;
+      max-width: 100%;
+    }
+    button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+    }
+    #result {
+      margin-top: 20px;
+      font-size: 20px;
+      color: green;
+    }
+  </style>
+</head>
+<body>
+  <h2>Brahmin to Tamil Translator</h2>
+
+  <!-- Upload Image Manually -->
+  <input type="file" id="imageInput" accept="image/*">
+  <button onclick="submitImage()">Translate from File</button>
+
+  <hr>
+
+  <!-- Camera Section -->
+  <video id="camera" autoplay playsinline width="300" height="225"></video><br>
+  <button onclick="captureAndTranslate()">Capture & Translate from Camera</button>
+  <canvas id="snapshot" style="display: none;"></canvas>
+
+  <!-- Result -->
+  <p id="result">Translation result will appear here.</p>
+
+  <script>
+    const video = document.getElementById('camera');
+    const canvas = document.getElementById('snapshot');
+    const resultText = document.getElementById('result');
+
+    // Start camera on page load
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+      } catch (err) {
+        alert("Camera access is not allowed or not available.");
+        console.error(err);
+      }
+    }
+
+    startCamera();
+
+    // Translate uploaded file
+    async function submitImage() {
+      const input = document.getElementById('imageInput');
+      const file = input.files[0];
+      if (!file) return alert("Please select an image file to translate.");
+      await sendImageToServer(file);
+    }
+
+    // Translate captured image from camera
+    async function captureAndTranslate() {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      canvas.toBlob(async (blob) => {
+        if (blob) {
+          await sendImageToServer(blob);
+        } else {
+          alert("Unable to capture image.");
+        }
+      }, 'image/jpeg');
+    }
+
+    // Send image to backend for translation
+    async function sendImageToServer(imageBlob) {
+      resultText.textContent = "Translating...";
+      const formData = new FormData();
+      formData.append("image", imageBlob);
+
+      try {
+        const response = await fetch("/predict", {
+          method: "POST",
+          body: formData
+        });
+
+        if (!response.ok) throw new Error("Prediction failed");
+
+        const data = await response.json();
+        resultText.textContent = "Translated Character: " + data.character;
+      } catch (error) {
+        resultText.textContent = "Error: " + error.message;
+      }
+    }
+  </script>
+</body>
+</html>
+
+
